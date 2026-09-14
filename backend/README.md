@@ -1,7 +1,7 @@
 # Sports League Scoreboard — Backend
 
 FastAPI implementation of the contract in [`../openapi.yaml`](../openapi.yaml),
-backed by an in-memory store that is seeded with a small demo league so the
+backed by SQLAlchemy that is seeded with a small demo league so the
 frontend has data to render immediately.
 
 ## Running
@@ -11,6 +11,16 @@ cd backend
 uv sync
 uv run uvicorn app.main:app --reload --port 8000
 ```
+
+The server uses SQLite at `league.db` by default. Set `DATABASE_URL` to connect
+to another SQLAlchemy-supported database; for example:
+
+```bash
+DATABASE_URL=sqlite:////absolute/path/to/league.db uv run uvicorn app.main:app
+```
+
+Tables are created directly by SQLAlchemy at startup. Alembic is intentionally
+not used.
 
 All endpoints are served under `/api`, e.g. `http://localhost:8000/api/standings`.
 

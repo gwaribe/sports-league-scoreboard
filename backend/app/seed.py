@@ -1,4 +1,4 @@
-"""Seed the in-memory store with a small demo league.
+"""Seed the database with a small demo league.
 
 The data mirrors the examples in ``openapi.yaml`` so the frontend has teams,
 live matches, results and a populated standings table as soon as the server

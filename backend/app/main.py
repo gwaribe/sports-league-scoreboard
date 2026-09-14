@@ -1,7 +1,7 @@
 """FastAPI application entrypoint.
 
 Wires the routers under the ``/api`` prefix (matching ``openapi.yaml``), seeds
-the in-memory store on startup, enables CORS for the local frontend, and
+the database on startup, enables CORS for the local frontend, and
 normalises every error into the ``{"detail": "..."}`` shape the frontend expects.
 
 Per ``openapi.yaml`` every endpoint is unauthenticated.
@@ -26,7 +26,8 @@ API_PREFIX = "/api"
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Seed demo data so the frontend has something to show immediately."""
+    """Create tables and seed demo data for the frontend."""
+    store.initialize()
     if store.is_empty:
         seed.seed_store(store)
     yield

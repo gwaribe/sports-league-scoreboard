@@ -8,6 +8,7 @@ from app.store import Store
 
 def test_seed_store_is_idempotent():
     store = Store()
+    store.reset()
     seed_store(store)
     team_count = len(store.list_teams())
 
