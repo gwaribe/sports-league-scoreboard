@@ -9,12 +9,8 @@ from __future__ import annotations
 
 from datetime import timedelta
 
-from .auth import hash_password
 from .models import MatchStatus, utc_now
 from .store import Store
-
-DEMO_USERNAME = "operator"
-DEMO_PASSWORD = "operator123"
 
 _TEAMS = [
     ("Northside Nomads", None),
@@ -46,7 +42,9 @@ def seed_store(store: Store) -> Store:
         match = store.create_match(
             team_ids[home],
             team_ids[away],
-            scheduled_at=None if status_ == MatchStatus.live else now + timedelta(hours=offset),
+            scheduled_at=None
+            if status_ == MatchStatus.live
+            else now + timedelta(hours=offset),
         )
         store.update_match(
             match.id,
@@ -55,5 +53,4 @@ def seed_store(store: Store) -> Store:
             status=status_,
         )
 
-    store.create_user(DEMO_USERNAME, hash_password(DEMO_PASSWORD))
     return store

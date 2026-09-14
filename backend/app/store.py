@@ -1,10 +1,10 @@
-"""Thread-safe in-memory store for teams, matches and operator accounts.
+"""Thread-safe in-memory store for teams and matches.
 
 The store stands in for a database: a process-lifetime singleton keeps the data
 in plain dicts, guards every read/write with a re-entrant lock, and assigns the
 ``team-1`` / ``match-1`` style ids used throughout ``openapi.yaml``.
 
-A fresh database is :meth:`seeded` with a small demo league so the frontend has
+A fresh database is seeded with a small demo league so the frontend has
 something to render on first load.
 """
 
@@ -12,29 +12,11 @@ from __future__ import annotations
 
 import threading
 
-from .models import (
-    Match,
-    MatchStatus,
-    Team,
-    User,
-    utc_now,
-)
+from .models import Match, MatchStatus, Team, utc_now
 
 
 class DuplicateTeamNameError(Exception):
     """Raised when a team name already exists (case-insensitive)."""
-
-
-class UserRecord:
-    """Internal account record holding the password hash (never exposed)."""
-
-    def __init__(self, username: str, password_hash: str):
-        self.username = username
-        self.password_hash = password_hash
-        self.created_at = utc_now()
-
-    def public(self) -> User:
-        return User(username=self.username, created_at=self.created_at)
 
 
 class Store:
@@ -44,7 +26,6 @@ class Store:
         self._lock = threading.RLock()
         self._teams: dict[str, Team] = {}
         self._matches: dict[str, Match] = {}
-        self._users: dict[str, UserRecord] = {}
         self._team_seq = 0
         self._match_seq = 0
 
@@ -55,14 +36,13 @@ class Store:
         with self._lock:
             self._teams.clear()
             self._matches.clear()
-            self._users.clear()
             self._team_seq = 0
             self._match_seq = 0
 
     @property
     def is_empty(self) -> bool:
         with self._lock:
-            return not self._teams and not self._matches and not self._users
+            return not self._teams and not self._matches
 
     # -- teams -------------------------------------------------------------
 
@@ -149,22 +129,6 @@ class Store:
                 for match in self._matches.values()
                 if match.status == MatchStatus.completed
             ]
-
-    # -- users -------------------------------------------------------------
-
-    def create_user(self, username: str, password_hash: str) -> User:
-        with self._lock:
-            record = UserRecord(username=username, password_hash=password_hash)
-            self._users[username.casefold()] = record
-            return record.public()
-
-    def get_user(self, username: str) -> UserRecord | None:
-        with self._lock:
-            return self._users.get(username.casefold())
-
-    def has_user(self, username: str) -> bool:
-        with self._lock:
-            return username.casefold() in self._users
 
 
 # Module-level singleton shared by the app and its dependencies.

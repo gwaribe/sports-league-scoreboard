@@ -2,16 +2,9 @@
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, HTTPException, status
 
-from ..auth import get_current_user
-from ..models import (
-    CreateMatchInput,
-    Match,
-    MatchStatus,
-    UpdateScoreInput,
-    User,
-)
+from ..models import CreateMatchInput, Match, MatchStatus, UpdateScoreInput
 from ..store import store
 
 router = APIRouter(prefix="/matches", tags=["Matches"])
@@ -30,16 +23,13 @@ def _require_match(match_id: str) -> Match:
 
 @router.get("", response_model=list[Match])
 def list_matches() -> list[Match]:
-    """Return every match across all statuses. Public."""
+    """Return every match across all statuses."""
     return store.list_matches()
 
 
 @router.post("", response_model=Match, status_code=status.HTTP_201_CREATED)
-def create_match(
-    payload: CreateMatchInput,
-    _current_user: User = Depends(get_current_user),
-) -> Match:
-    """Schedule a match between two existing teams. Requires authentication."""
+def create_match(payload: CreateMatchInput) -> Match:
+    """Schedule a match between two existing teams."""
     if payload.home_team_id == payload.away_team_id:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -59,12 +49,8 @@ def create_match(
 
 
 @router.patch("/{match_id}/score", response_model=Match)
-def update_score(
-    match_id: str,
-    payload: UpdateScoreInput,
-    _current_user: User = Depends(get_current_user),
-) -> Match:
-    """Overwrite both scores on a live or completed match. Requires auth."""
+def update_score(match_id: str, payload: UpdateScoreInput) -> Match:
+    """Overwrite both scores on a live or completed match."""
     match = _require_match(match_id)
     if match.status == MatchStatus.scheduled:
         raise HTTPException(
@@ -77,11 +63,8 @@ def update_score(
 
 
 @router.post("/{match_id}/start", response_model=Match)
-def start_match(
-    match_id: str,
-    _current_user: User = Depends(get_current_user),
-) -> Match:
-    """Transition a scheduled match to live. Requires auth."""
+def start_match(match_id: str) -> Match:
+    """Transition a scheduled match to live."""
     match = _require_match(match_id)
     if match.status != MatchStatus.scheduled:
         raise HTTPException(
@@ -92,11 +75,8 @@ def start_match(
 
 
 @router.post("/{match_id}/complete", response_model=Match)
-def complete_match(
-    match_id: str,
-    _current_user: User = Depends(get_current_user),
-) -> Match:
-    """Transition a live match to completed. Requires auth."""
+def complete_match(match_id: str) -> Match:
+    """Transition a live match to completed."""
     match = _require_match(match_id)
     if match.status != MatchStatus.live:
         raise HTTPException(

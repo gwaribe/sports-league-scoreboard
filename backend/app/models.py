@@ -114,51 +114,6 @@ class UpdateScoreInput(BaseModel):
         return self
 
 
-class RegisterInput(BaseModel):
-    """Request body for ``POST /auth/register``."""
-
-    model_config = ConfigDict(extra="forbid")
-
-    username: str = Field(min_length=1, max_length=50)
-    password: str = Field(min_length=8, max_length=128)
-
-    @field_validator("username")
-    @classmethod
-    def _trim_username(cls, value: str) -> str:
-        value = value.strip()
-        if not value:
-            raise ValueError("Username is required.")
-        return value
-
-
-class LoginInput(BaseModel):
-    """Request body for ``POST /auth/login``."""
-
-    model_config = ConfigDict(extra="forbid")
-
-    username: str = Field(min_length=1, max_length=50)
-    password: str = Field(min_length=1, max_length=128)
-
-
-class User(BaseModel):
-    """A stored operator account (public representation)."""
-
-    model_config = ConfigDict(extra="forbid")
-
-    username: str
-    created_at: datetime
-
-
-class TokenResponse(BaseModel):
-    """Response body for the auth endpoints."""
-
-    model_config = ConfigDict(extra="forbid")
-
-    access_token: str
-    token_type: str = "bearer"
-    expires_in: int
-
-
 class Error(BaseModel):
     """Standard error payload; the frontend shows ``detail`` verbatim."""
 

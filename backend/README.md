@@ -14,32 +14,26 @@ uv run uvicorn app.main:app --reload --port 8000
 
 All endpoints are served under `/api`, e.g. `http://localhost:8000/api/standings`.
 
+## Endpoints
+
+| Method | Path | Purpose |
+| --- | --- | --- |
+| `GET` | `/api/teams` | List teams |
+| `POST` | `/api/teams` | Register a team |
+| `GET` | `/api/matches` | List matches |
+| `POST` | `/api/matches` | Schedule a match |
+| `PATCH` | `/api/matches/{matchId}/score` | Overwrite a match score |
+| `POST` | `/api/matches/{matchId}/start` | Start a scheduled match |
+| `POST` | `/api/matches/{matchId}/complete` | Complete a live match |
+| `GET` | `/api/standings` | Sorted league table |
+
+Per `openapi.yaml` every endpoint is unauthenticated (the `bearerAuth` scheme is
+declared there only as a post-MVP extension point and is not applied to any
+operation).
+
 ## Tests
 
 ```bash
 cd backend
 uv run pytest
 ```
-
-## Authentication
-
-Read endpoints (`GET /teams`, `GET /matches`, `GET /standings`) are public.
-
-Operator endpoints that change state require a bearer token:
-
-| Endpoint | Auth |
-| --- | --- |
-| `POST /teams` | required |
-| `POST /matches` | required |
-| `PATCH /matches/{matchId}/score` | required |
-| `POST /matches/{matchId}/start` | required |
-| `POST /matches/{matchId}/complete` | required |
-
-Obtain a token with `POST /api/auth/login` (or create a user with
-`POST /api/auth/register`). Passwords are stored as salted PBKDF2-SHA256
-hashes; tokens are HMAC-SHA256 signed and carry an expiry.
-
-A demo operator is seeded and can log in immediately:
-
-- username: `operator`
-- password: `operator123`

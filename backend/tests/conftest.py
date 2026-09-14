@@ -6,7 +6,6 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app.main import app
-from app.seed import DEMO_PASSWORD, DEMO_USERNAME
 from app.store import store
 
 
@@ -25,14 +24,3 @@ def empty_client():
     with TestClient(app) as test_client:
         store.reset()
         yield test_client
-
-
-@pytest.fixture()
-def auth_headers(client) -> dict[str, str]:
-    """Bearer headers for the seeded demo operator."""
-    response = client.post(
-        "/api/auth/login",
-        json={"username": DEMO_USERNAME, "password": DEMO_PASSWORD},
-    )
-    assert response.status_code == 200, response.text
-    return {"Authorization": f"Bearer {response.json()['access_token']}"}

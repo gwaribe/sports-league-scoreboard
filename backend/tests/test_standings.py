@@ -7,7 +7,7 @@ def _row_by_team(rows):
     return {row["team_id"]: row for row in rows}
 
 
-def test_standings_is_public_and_sorted(client):
+def test_standings_is_sorted(client):
     response = client.get("/api/standings")
 
     assert response.status_code == 200
@@ -35,10 +35,8 @@ def test_standings_aggregates_completed_matches_only(client):
     assert hawks["points"] == 0
 
 
-def test_team_without_completed_matches_has_zero_row(client, auth_headers):
-    created = client.post(
-        "/api/teams", json={"name": "Benched Braves"}, headers=auth_headers
-    ).json()
+def test_team_without_completed_matches_has_zero_row(client):
+    created = client.post("/api/teams", json={"name": "Benched Braves"}).json()
 
     rows = _row_by_team(client.get("/api/standings").json())
     row = rows[created["id"]]
@@ -51,7 +49,7 @@ def test_team_without_completed_matches_has_zero_row(client, auth_headers):
     assert row["points"] == 0
 
 
-def test_completing_a_match_updates_standings(client, auth_headers):
+def test_completing_a_match_updates_standings(client):
     before = _row_by_team(client.get("/api/standings").json())
     assert before["team-3"]["won"] == 1
 
@@ -59,9 +57,8 @@ def test_completing_a_match_updates_standings(client, auth_headers):
     client.patch(
         "/api/matches/match-3/score",
         json={"home_score": 41, "away_score": 50},
-        headers=auth_headers,
     )
-    response = client.post("/api/matches/match-3/complete", headers=auth_headers)
+    response = client.post("/api/matches/match-3/complete")
     assert response.status_code == 200
 
     after = _row_by_team(client.get("/api/standings").json())
@@ -73,7 +70,7 @@ def test_completing_a_match_updates_standings(client, auth_headers):
     assert client.get("/api/standings").json()[0]["team_id"] == "team-3"
 
 
-def test_standings_sort_ties_by_points_for(client, auth_headers):
+def test_standings_sort_ties_by_points_for(client):
     # Two teams with equal points and diff, ordered by points_for descending.
     rows = client.get("/api/standings").json()
     winners = [row for row in rows if row["points"] == 1]
