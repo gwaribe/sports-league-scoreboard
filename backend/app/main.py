@@ -1,8 +1,8 @@
 """FastAPI application entrypoint.
 
 Wires the routers under the ``/api`` prefix (matching ``openapi.yaml``), seeds
-the in-memory store on startup, and normalises every error into the
-``{"detail": "..."}`` shape the frontend expects.
+the in-memory store on startup, enables CORS for the local frontend, and
+normalises every error into the ``{"detail": "..."}`` shape the frontend expects.
 
 Per ``openapi.yaml`` every endpoint is unauthenticated.
 """
@@ -13,6 +13,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
@@ -35,6 +36,15 @@ app = FastAPI(
     title="Sports League Scoreboard API",
     version="1.0.0",
     lifespan=lifespan,
+)
+
+# Allow the local dev frontend (any port on localhost/127.0.0.1) to call the API
+# from the browser. Covered origins are not authenticated, so credentials stay off.
+app.add_middleware(
+    CORSMiddleware,
+    allow_origin_regex=r"^http://(localhost|127\.0\.0\.1)(:\d+)?$",
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 

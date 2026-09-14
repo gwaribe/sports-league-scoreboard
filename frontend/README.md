@@ -28,3 +28,19 @@ cd <repository-name>
 npm i
 npm run dev
 ```
+
+## Backend API
+
+The frontend talks to the FastAPI backend in `../backend` through
+`frontend/src/services/http-league-service.ts`. The base URL is read from the
+`VITE_API_BASE_URL` environment variable:
+
+```sh
+cp .env.example .env
+# VITE_API_BASE_URL=http://localhost:8000/api
+```
+
+The default is `http://localhost:8000/api`, which matches the backend dev server
+(`cd backend && uv run uvicorn app.main:app --reload --port 8000`). Set it to
+`/api` for a same-origin deployment. `MockLeagueService` remains available for
+tests and offline development via `setLeagueService(new MockLeagueService())`.
