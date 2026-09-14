@@ -50,7 +50,7 @@ info:
 
 servers:
   - url: /api
-    description: Same-origin deployment (recommended; matches the Django `/api` prefix convention)
+    description: Same-origin deployment (recommended; matches the backend's `/api` prefix)
   - url: http://localhost:8000/api
     description: Local backend development
 
