@@ -56,3 +56,7 @@ It is not necessary to write the code, but it is very important to understand ho
 - Agent overthinking: The project was small and doable in one session. I had specified 14 GitHub issues, but 26 were created, including out-of-scope tasks that I did not want for a prototype. I discarded the extra issues and reduced the model reasoning to low, which worked better.
 
 - Approving commands every time: I did not want to babysit the agent, which is why I moved the work to a cloud server so it could run all the commands it needed. After setting up the project, I wanted to take coffee and return to find the work complete. This is something I will research further.
+
+---
+Lessons were learnt from\
+[DataTalksClub AI dev tools zoomcamp](https://github.com/DataTalksClub/ai-dev-tools-zoomcamp)
