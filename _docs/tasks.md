@@ -56,3 +56,6 @@ Items moved out of scope while grooming the tasks above live in their own issues
 - [#21](https://github.com/gwaribe/sports-league-scoreboard/issues/21) - Add update and delete operations for teams and matches
 - [#22](https://github.com/gwaribe/sports-league-scoreboard/issues/22) - Add CI and a containerized deployment
 - [#23](https://github.com/gwaribe/sports-league-scoreboard/issues/23) - Import and export league data
+- [#24](https://github.com/gwaribe/sports-league-scoreboard/issues/24) - Record score history and support incremental scoring
+- [#25](https://github.com/gwaribe/sports-league-scoreboard/issues/25) - Add machine-readable error codes and field-level validation detail
+- [#26](https://github.com/gwaribe/sports-league-scoreboard/issues/26) - Add offline support and optimistic updates to the frontend
