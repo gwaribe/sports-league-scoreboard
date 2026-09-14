@@ -1,0 +1,775 @@
+openapi: 3.1.0
+
+info:
+  title: Sports League Scoreboard API
+  version: 1.0.0
+  summary: Backend contract required by the Sports League Scoreboard frontend.
+  description: |
+    Contract for the backend expected by the frontend service layer defined in
+    `frontend/src/services/types.ts` (`LeagueService`) and implemented today by
+    `frontend/src/services/mock-league-service.ts`.
+
+    The frontend exposes exactly eight operations and this document maps each one
+    to an HTTP endpoint:
+
+    | `LeagueService` method | Endpoint |
+    | --- | --- |
+    | `listTeams()` | `GET /teams` |
+    | `createTeam(input)` | `POST /teams` |
+    | `listMatches()` | `GET /matches` |
+    | `createMatch(input)` | `POST /matches` |
+    | `updateScore(matchId, input)` | `PATCH /matches/{matchId}/score` |
+    | `startMatch(matchId)` | `POST /matches/{matchId}/start` |
+    | `completeMatch(matchId)` | `POST /matches/{matchId}/complete` |
+    | `getStandings()` | `GET /standings` |
+
+    ### Authentication
+    The MVP explicitly ships without user accounts, logins or permission checks
+    (see `_docs/sports_league_scoreboard_spec.md` section 5, "Accessibility &
+    Simplicity": *zero login screens or authentication barriers*). Every endpoint
+    in this document is therefore **unauthenticated**; each operation states this
+    with an explicit empty `security: []` requirement. A bearer-token scheme is
+    declared in `components.securitySchemes` only as the recommended extension
+    point for the post-MVP operator endpoints (`POST /teams`, `POST /matches`,
+    `PATCH /matches/{matchId}/score`, `POST /matches/{matchId}/start`,
+    `POST /matches/{matchId}/complete`); it is deliberately not applied to any
+    operation.
+
+    ### Error shape
+    Every non-2xx response returns a JSON object with a human-readable `detail`
+    string, which the frontend surfaces directly through `LeagueError`/`toast`.
+
+    ### Polling
+    Clients poll `GET /matches` and `GET /standings` every 5-10 seconds
+    (the shipped frontend uses 6s). Responses should be cheap and cache-busting
+    headers must not break polling.
+  contact:
+    name: Sports League Scoreboard
+  license:
+    name: UNLICENSED
+
+servers:
+  - url: /api
+    description: Same-origin deployment (recommended; matches the Django `/api` prefix convention)
+  - url: http://localhost:8000/api
+    description: Local backend development
+
+security: []
+
+tags:
+  - name: Teams
+    description: Team registration and listing.
+  - name: Matches
+    description: Scheduling, live scoring and match lifecycle.
+  - name: Standings
+    description: Read-only league table derived from completed matches.
+
+paths:
+  /teams:
+    get:
+      operationId: listTeams
+      summary: List all registered teams
+      description: |
+        Backs `LeagueService.listTeams()`. Returns every team in the league,
+        used to populate team pickers and to resolve names/logos on the
+        scoreboard. No authentication required.
+      tags:
+        - Teams
+      security: []
+      responses:
+        "200":
+          description: All registered teams.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Team"
+              example:
+                - id: team-1
+                  name: Northside Nomads
+                  logo_url: null
+                  created_at: "2026-09-14T06:40:00Z"
+                - id: team-2
+                  name: Harbour Hawks
+                  logo_url: https://example.com/hawks.png
+                  created_at: "2026-09-14T06:40:01Z"
+        "500":
+          $ref: "#/components/responses/ServerError"
+
+    post:
+      operationId: createTeam
+      summary: Register a new team
+      description: |
+        Backs `LeagueService.createTeam(input)`. Creates a team with a required
+        unique `name` and an optional `logo_url` (FR-1.1).
+
+        Behaviour:
+        - `name` is trimmed; a blank/whitespace-only name is rejected.
+        - Team names are unique case-insensitively; a duplicate is rejected.
+        - `logo_url` is trimmed; an empty string is stored as `null`.
+        - `created_at` is assigned by the server.
+
+        No authentication required in the MVP. This is an operator action and is
+        the primary candidate for post-MVP auth.
+      tags:
+        - Teams
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateTeamInput"
+            example:
+              name: Northside Nomads
+              logo_url: https://example.com/nomads.png
+      responses:
+        "201":
+          description: Team registered.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Team"
+              example:
+                id: team-1
+                name: Northside Nomads
+                logo_url: https://example.com/nomads.png
+                created_at: "2026-09-14T06:40:00Z"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "409":
+          description: A team with that name already exists (case-insensitive match).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              example:
+                detail: A team with that name already exists.
+        "500":
+          $ref: "#/components/responses/ServerError"
+
+  /matches:
+    get:
+      operationId: listMatches
+      summary: List all matches
+      description: |
+        Backs `LeagueService.listMatches()`. Returns every match across all
+        statuses (`scheduled`, `live`, `completed`) so the scoreboard can render
+        fixtures, live games and results. Polled every 5-10 seconds.
+        No authentication required.
+      tags:
+        - Matches
+      security: []
+      responses:
+        "200":
+          description: All matches.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Match"
+              example:
+                - id: match-1
+                  home_team_id: team-1
+                  away_team_id: team-2
+                  home_score: 82
+                  away_score: 74
+                  status: completed
+                  scheduled_at: "2026-09-14T06:00:00Z"
+                  created_at: "2026-09-14T05:45:00Z"
+                  updated_at: "2026-09-14T06:30:00Z"
+                - id: match-4
+                  home_team_id: team-2
+                  away_team_id: team-4
+                  home_score: 0
+                  away_score: 0
+                  status: scheduled
+                  scheduled_at: "2026-09-14T08:00:00Z"
+                  created_at: "2026-09-14T05:45:00Z"
+                  updated_at: "2026-09-14T05:45:00Z"
+        "500":
+          $ref: "#/components/responses/ServerError"
+
+    post:
+      operationId: createMatch
+      summary: Schedule a match
+      description: |
+        Backs `LeagueService.createMatch(input)` (FR-2.1). Creates a match between
+        two existing teams and initialises it to `scheduled` with a `0 - 0` score.
+
+        Behaviour:
+        - `home_team_id` and `away_team_id` must both reference existing teams.
+        - A team cannot be scheduled to play itself.
+        - `scheduled_at` is optional and may be `null` when no kick-off time is set.
+        - `home_score`, `away_score`, `status`, `created_at` and `updated_at` are
+          assigned by the server, not the client.
+
+        No authentication required in the MVP. This is an operator action.
+      tags:
+        - Matches
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateMatchInput"
+            example:
+              home_team_id: team-1
+              away_team_id: team-2
+              scheduled_at: "2026-09-14T08:00:00Z"
+      responses:
+        "201":
+          description: Match scheduled.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Match"
+              example:
+                id: match-9
+                home_team_id: team-1
+                away_team_id: team-2
+                home_score: 0
+                away_score: 0
+                status: scheduled
+                scheduled_at: "2026-09-14T08:00:00Z"
+                created_at: "2026-09-14T06:41:00Z"
+                updated_at: "2026-09-14T06:41:00Z"
+        "400":
+          description: |
+            Invalid matchup. Returned when the two teams are the same
+            ("A team cannot play itself.") or when either team id is unknown
+            ("Unknown team selected.").
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              examples:
+                sameTeam:
+                  value:
+                    detail: A team cannot play itself.
+                unknownTeam:
+                  value:
+                    detail: Unknown team selected.
+        "500":
+          $ref: "#/components/responses/ServerError"
+
+  /matches/{matchId}/score:
+    parameters:
+      - $ref: "#/components/parameters/MatchId"
+    patch:
+      operationId: updateScore
+      summary: Update the score of a live or completed match
+      description: |
+        Backs `LeagueService.updateScore(matchId, input)` (FR-2.3). Overwrites
+        both scores with the supplied integers; it is not an increment/delta.
+
+        Behaviour:
+        - Allowed while the match is `live` or `completed`.
+        - Rejected while the match is `scheduled`
+          ("Start the match before entering scores.").
+        - Both scores must be whole numbers greater than or equal to zero.
+        - `updated_at` is refreshed by the server.
+
+        No authentication required in the MVP. This is an operator action.
+      tags:
+        - Matches
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateScoreInput"
+            example:
+              home_score: 45
+              away_score: 41
+      responses:
+        "200":
+          description: Score updated.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Match"
+              example:
+                id: match-3
+                home_team_id: team-1
+                away_team_id: team-3
+                home_score: 45
+                away_score: 41
+                status: live
+                scheduled_at: "2026-09-14T06:20:00Z"
+                created_at: "2026-09-14T05:45:00Z"
+                updated_at: "2026-09-14T06:41:30Z"
+        "400":
+          description: |
+            Invalid score update. Returned for non-integer or negative scores
+            ("Scores must be whole numbers of zero or more.") or when the match
+            has not started yet ("Start the match before entering scores.").
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              examples:
+                invalidScore:
+                  value:
+                    detail: Scores must be whole numbers of zero or more.
+                notStarted:
+                  value:
+                    detail: Start the match before entering scores.
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/ServerError"
+
+  /matches/{matchId}/start:
+    parameters:
+      - $ref: "#/components/parameters/MatchId"
+    post:
+      operationId: startMatch
+      summary: Start a scheduled match
+      description: |
+        Backs `LeagueService.startMatch(matchId)` (FR-2.2). Transitions
+        `scheduled` → `live`. Refreshes `updated_at`.
+
+        Only a `scheduled` match can be started; any other status is rejected.
+
+        This request takes no body.
+
+        No authentication required in the MVP. This is an operator action.
+      tags:
+        - Matches
+      security: []
+      responses:
+        "200":
+          description: Match is now live.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Match"
+              example:
+                id: match-4
+                home_team_id: team-2
+                away_team_id: team-4
+                home_score: 0
+                away_score: 0
+                status: live
+                scheduled_at: "2026-09-14T08:00:00Z"
+                created_at: "2026-09-14T05:45:00Z"
+                updated_at: "2026-09-14T06:42:00Z"
+        "400":
+          $ref: "#/components/responses/InvalidTransition"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/ServerError"
+
+  /matches/{matchId}/complete:
+    parameters:
+      - $ref: "#/components/parameters/MatchId"
+    post:
+      operationId: completeMatch
+      summary: Complete a live match
+      description: |
+        Backs `LeagueService.completeMatch(matchId)` (FR-2.2, FR-2.4).
+        Transitions `live` → `completed` and refreshes `updated_at`. On success
+        the match starts contributing to `GET /standings`.
+
+        Behaviour:
+        - Only a `live` match can be completed; any other status is rejected.
+        - Draws are disallowed: a match whose scores are equal is rejected and the
+          operator must adjust the score first.
+
+        This request takes no body.
+
+        No authentication required in the MVP. This is an operator action.
+      tags:
+        - Matches
+      security: []
+      responses:
+        "200":
+          description: Match is now completed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Match"
+              example:
+                id: match-3
+                home_team_id: team-1
+                away_team_id: team-3
+                home_score: 45
+                away_score: 41
+                status: completed
+                scheduled_at: "2026-09-14T06:20:00Z"
+                created_at: "2026-09-14T05:45:00Z"
+                updated_at: "2026-09-14T06:43:00Z"
+        "400":
+          description: |
+            The match cannot be completed. Returned when the match is not live
+            ("Only a live match can be completed.") or when the scores are tied
+            ("Matches cannot end in a draw. Adjust the score first.").
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              examples:
+                invalidTransition:
+                  value:
+                    detail: Only a live match can be completed.
+                draw:
+                  value:
+                    detail: Matches cannot end in a draw. Adjust the score first.
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/ServerError"
+
+  /standings:
+    get:
+      operationId: getStandings
+      summary: Get the league standings
+      description: |
+        Backs `LeagueService.getStandings()` (FR-3). Returns one row per
+        registered team, derived from `completed` matches only:
+
+        - `won` / `lost` from matches where the team's score was strictly higher
+          / lower. A draw contributes nothing (draws are disallowed by
+          `POST /matches/{matchId}/complete`).
+        - `played = won + lost`, `point_diff = points_for - points_against`,
+          `points = won` (1 point per win, 0 per loss).
+        - Rows are sorted by `points` desc, then `point_diff` desc, then
+          `points_for` desc, then `team_name` ascending.
+
+        Teams with no completed matches are included with all-zero statistics.
+        Polled every 5-10 seconds. No authentication required.
+      tags:
+        - Standings
+      security: []
+      responses:
+        "200":
+          description: League table, already sorted.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/StandingRow"
+              example:
+                - team_id: team-1
+                  team_name: Northside Nomads
+                  played: 1
+                  won: 1
+                  lost: 0
+                  points_for: 82
+                  points_against: 74
+                  point_diff: 8
+                  points: 1
+                - team_id: team-3
+                  team_name: Vale Vipers
+                  played: 1
+                  won: 1
+                  lost: 0
+                  points_for: 68
+                  points_against: 61
+                  point_diff: 7
+                  points: 1
+                - team_id: team-2
+                  team_name: Harbour Hawks
+                  played: 1
+                  won: 0
+                  lost: 1
+                  points_for: 74
+                  points_against: 82
+                  point_diff: -8
+                  points: 0
+        "500":
+          $ref: "#/components/responses/ServerError"
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: |
+        Declared for post-MVP use only. The MVP requires no authentication on any
+        endpoint, so this scheme is intentionally not applied to any operation.
+
+  parameters:
+    MatchId:
+      name: matchId
+      in: path
+      required: true
+      description: Unique identifier of the match.
+      schema:
+        type: string
+        minLength: 1
+      example: match-3
+
+  responses:
+    BadRequest:
+      description: The request was rejected because of invalid input.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+          example:
+            detail: Team name is required.
+    NotFound:
+      description: No match exists with the supplied `matchId`.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+          example:
+            detail: Match not found.
+    InvalidTransition:
+      description: The requested status transition is not allowed.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+          example:
+            detail: Only a scheduled match can be started.
+    ServerError:
+      description: Unexpected server error.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+          example:
+            detail: Internal server error.
+
+  schemas:
+    MatchStatus:
+      type: string
+      description: Lifecycle state of a match. Valid transitions are `scheduled` → `live` → `completed`.
+      enum:
+        - scheduled
+        - live
+        - completed
+      example: live
+
+    Team:
+      type: object
+      description: A registered team (FR-1.1, FR-1.2).
+      additionalProperties: false
+      required:
+        - id
+        - name
+        - created_at
+      properties:
+        id:
+          type: string
+          description: Unique team identifier.
+          example: team-1
+        name:
+          type: string
+          description: Team name, unique case-insensitively.
+          minLength: 1
+          maxLength: 100
+          example: Northside Nomads
+        logo_url:
+          type: [string, "null"]
+          description: Optional link to the team logo or avatar image.
+          maxLength: 255
+          format: uri
+          example: https://example.com/nomads.png
+        created_at:
+          type: string
+          description: Record creation timestamp (ISO 8601, UTC).
+          format: date-time
+          example: "2026-09-14T06:40:00Z"
+
+    Match:
+      type: object
+      description: A fixture between two teams, including live and final scores (FR-2).
+      additionalProperties: false
+      required:
+        - id
+        - home_team_id
+        - away_team_id
+        - home_score
+        - away_score
+        - status
+        - created_at
+        - updated_at
+      properties:
+        id:
+          type: string
+          description: Unique match identifier.
+          example: match-1
+        home_team_id:
+          type: string
+          description: Reference to the home team's `Team.id`.
+          example: team-1
+        away_team_id:
+          type: string
+          description: Reference to the away team's `Team.id`.
+          example: team-2
+        home_score:
+          type: integer
+          description: Current or final home points.
+          minimum: 0
+          default: 0
+          example: 82
+        away_score:
+          type: integer
+          description: Current or final away points.
+          minimum: 0
+          default: 0
+          example: 74
+        status:
+          $ref: "#/components/schemas/MatchStatus"
+        scheduled_at:
+          type: [string, "null"]
+          description: Optional scheduled kick-off time.
+          format: date-time
+          example: "2026-09-14T08:00:00Z"
+        created_at:
+          type: string
+          description: Record creation timestamp (ISO 8601, UTC).
+          format: date-time
+          example: "2026-09-14T05:45:00Z"
+        updated_at:
+          type: string
+          description: Last modification timestamp (ISO 8601, UTC).
+          format: date-time
+          example: "2026-09-14T06:43:00Z"
+
+    StandingRow:
+      type: object
+      description: One team's aggregated row in the league table (FR-3).
+      additionalProperties: false
+      required:
+        - team_id
+        - team_name
+        - played
+        - won
+        - lost
+        - points_for
+        - points_against
+        - point_diff
+        - points
+      properties:
+        team_id:
+          type: string
+          description: Reference to the team's `Team.id`.
+          example: team-1
+        team_name:
+          type: string
+          description: Denormalised team name for display.
+          example: Northside Nomads
+        played:
+          type: integer
+          description: Number of completed matches (MP).
+          minimum: 0
+          example: 1
+        won:
+          type: integer
+          description: Completed matches won (W). 1 point each.
+          minimum: 0
+          example: 1
+        lost:
+          type: integer
+          description: Completed matches lost (L). 0 points.
+          minimum: 0
+          example: 0
+        points_for:
+          type: integer
+          description: Total points scored across completed matches (PF).
+          minimum: 0
+          example: 82
+        points_against:
+          type: integer
+          description: Total points conceded across completed matches (PA).
+          minimum: 0
+          example: 74
+        point_diff:
+          type: integer
+          description: "Point differential (DIFF = points_for - points_against)."
+          example: 8
+        points:
+          type: integer
+          description: Total league points (PTS). Equals `won`.
+          minimum: 0
+          example: 1
+
+    CreateTeamInput:
+      type: object
+      description: Request body for `POST /teams` (`CreateTeamInput`).
+      additionalProperties: false
+      required:
+        - name
+      properties:
+        name:
+          type: string
+          description: Team name. Required, trimmed, non-empty and unique case-insensitively.
+          minLength: 1
+          maxLength: 100
+          example: Northside Nomads
+        logo_url:
+          type: [string, "null"]
+          description: Optional logo URL. A blank string is stored as `null`.
+          maxLength: 255
+          format: uri
+          example: https://example.com/nomads.png
+
+    CreateMatchInput:
+      type: object
+      description: Request body for `POST /matches` (`CreateMatchInput`).
+      additionalProperties: false
+      required:
+        - home_team_id
+        - away_team_id
+      properties:
+        home_team_id:
+          type: string
+          description: Home team id. Must reference an existing team and differ from `away_team_id`.
+          minLength: 1
+          example: team-1
+        away_team_id:
+          type: string
+          description: Away team id. Must reference an existing team and differ from `home_team_id`.
+          minLength: 1
+          example: team-2
+        scheduled_at:
+          type: [string, "null"]
+          description: Optional kick-off time. Omit or send `null` when unscheduled.
+          format: date-time
+          example: "2026-09-14T08:00:00Z"
+
+    UpdateScoreInput:
+      type: object
+      description: Request body for `PATCH /matches/{matchId}/score` (`UpdateScoreInput`).
+      additionalProperties: false
+      required:
+        - home_score
+        - away_score
+      properties:
+        home_score:
+          type: integer
+          description: Absolute (not incremental) home score. Whole number, zero or more.
+          minimum: 0
+          example: 45
+        away_score:
+          type: integer
+          description: Absolute (not incremental) away score. Whole number, zero or more.
+          minimum: 0
+          example: 41
+
+    Error:
+      type: object
+      description: |
+        Standard error payload. The frontend displays `detail` verbatim to the
+        operator via `LeagueError`/`toast`.
+      additionalProperties: false
+      required:
+        - detail
+      properties:
+        detail:
+          type: string
+          description: Human-readable explanation of the failure.
+          example: Match not found.
