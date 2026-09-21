@@ -1,0 +1,35 @@
+# Local stack for running the scoreboard against PostgreSQL.
+#
+#   docker compose up --build        # database + app on http://localhost:8000
+#   docker compose up -d db          # database only, for `uv run` development
+#
+# The app connects with the psycopg (v3) driver; see backend/README.md.
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: scoreboard
+      POSTGRES_PASSWORD: scoreboard
+      POSTGRES_DB: scoreboard
+    ports:
+      - "5432:5432"
+    volumes:
+      - scoreboard-db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U scoreboard -d scoreboard"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  app:
+    build: .
+    environment:
+      DATABASE_URL: postgresql+psycopg://scoreboard:scoreboard@db:5432/scoreboard
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  scoreboard-db:

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from sqlalchemy import ForeignKey, String
+from sqlalchemy import DateTime, ForeignKey, String
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 
@@ -21,7 +21,9 @@ class TeamRecord(Base):
     name: Mapped[str] = mapped_column(String(100), nullable=False)
     name_key: Mapped[str] = mapped_column(String(255), nullable=False, unique=True)
     logo_url: Mapped[str | None] = mapped_column(String(255))
-    created_at: Mapped[datetime] = mapped_column(nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False
+    )
 
     @property
     def public_id(self) -> str:
@@ -43,9 +45,13 @@ class MatchRecord(Base):
     home_score: Mapped[int] = mapped_column(nullable=False, default=0)
     away_score: Mapped[int] = mapped_column(nullable=False, default=0)
     status: Mapped[str] = mapped_column(String(20), nullable=False)
-    scheduled_at: Mapped[datetime | None] = mapped_column()
-    created_at: Mapped[datetime] = mapped_column(nullable=False)
-    updated_at: Mapped[datetime] = mapped_column(nullable=False)
+    scheduled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False
+    )
 
     @property
     def public_id(self) -> str:
