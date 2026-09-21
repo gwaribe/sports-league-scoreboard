@@ -10,6 +10,8 @@ Per ``openapi.yaml`` every endpoint is unauthenticated.
 from __future__ import annotations
 
 from contextlib import asynccontextmanager
+import os
+from pathlib import Path
 
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
@@ -18,6 +20,7 @@ from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from . import seed
+from .frontend import FrontendStaticFiles
 from .routers import matches, standings, teams
 from .store import store
 
@@ -78,3 +81,11 @@ async def http_exception_handler(
 app.include_router(teams.router, prefix=API_PREFIX)
 app.include_router(matches.router, prefix=API_PREFIX)
 app.include_router(standings.router, prefix=API_PREFIX)
+
+# Docker copies the frontend bundle here. Backend-only development also works
+# without a build; FRONTEND_DIR can point to a local dist/client directory.
+frontend_dir = Path(
+    os.getenv("FRONTEND_DIR", Path(__file__).resolve().parent.parent / "static")
+)
+if "FRONTEND_DIR" in os.environ or frontend_dir.is_dir():
+    app.mount("/", FrontendStaticFiles(directory=frontend_dir, html=True), name="frontend")

@@ -44,3 +44,10 @@ The default is `http://localhost:8000/api`, which matches the backend dev server
 (`cd backend && uv run uvicorn app.main:app --reload --port 8000`). Set it to
 `/api` for a same-origin deployment. `MockLeagueService` remains available for
 tests and offline development via `setLeagueService(new MockLeagueService())`.
+
+## Static deployment
+
+`VITE_API_BASE_URL=/api npm run build:static` builds a standalone SPA into
+`dist/client` for the Python backend to serve. The existing `npm run build`
+continues to build the TanStack Start deployment. See the
+[root README](../README.md) for Docker and local serving instructions.

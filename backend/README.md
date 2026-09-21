@@ -24,6 +24,10 @@ not used.
 
 All endpoints are served under `/api`, e.g. `http://localhost:8000/api/standings`.
 
+The backend also serves the frontend when a static build is available in
+`backend/static`, or in the directory set by `FRONTEND_DIR`. See the
+[root README](../README.md) for the combined Docker image and local static build.
+
 ## Endpoints
 
 | Method | Path | Purpose |
