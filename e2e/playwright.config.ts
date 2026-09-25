@@ -46,7 +46,9 @@ export default defineConfig({
     ...(channel === "bundled" ? {} : { channel }),
     trace: "on-first-retry",
     screenshot: "only-on-failure",
-    video: "retain-on-failure",
+    // No `video`: rendering it needs Playwright's separate ffmpeg download.
+    // Traces and failure screenshots already cover debugging, download-free.
+    video: "off",
   },
   projects: [
     {

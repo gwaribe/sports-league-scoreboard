@@ -41,6 +41,10 @@ PLAYWRIGHT_CHANNEL=bundled npm run e2e
 
 `PLAYWRIGHT_CHANNEL` also accepts `chromium`, `msedge`, etc.
 
+Video recording is disabled in `playwright.config.ts` on purpose: rendering
+video requires Playwright's separate `ffmpeg` download. Traces (`on-first-retry`)
+and failure screenshots cover debugging without any extra binary.
+
 ## What is covered
 
 - `tests/api.spec.ts` — the **integration** suite (run with
