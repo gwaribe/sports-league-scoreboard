@@ -8,7 +8,7 @@ set -euo pipefail
 
 base="${1:-${PLAYWRIGHT_BASE_URL:-http://localhost:8000}}"
 base="${base%/}"
-url="${base}/api/teams"
+url="${base}/api/health"
 timeout="${APP_READY_TIMEOUT:-180}"
 deadline=$((SECONDS + timeout))
 

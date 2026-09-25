@@ -1,8 +1,9 @@
 # End-to-end tests
 
 Playwright tests that exercise the whole application the way a person would.
-They run against an **already-deployed** instance (for example the Render web
-service) and never build or start the app themselves.
+They run against whatever URL you point them at: the CI pipeline targets the
+docker compose stack it just built, and you can target a deployed instance (for
+example the Render web service).
 
 ## Run against a deployment
 
@@ -42,9 +43,11 @@ PLAYWRIGHT_CHANNEL=bundled npm run e2e
 
 ## What is covered
 
-- `tests/api.spec.ts` — the HTTP contract: SPA serving and client-route
-  fallback, JSON errors, duplicate-team handling, and match lifecycle rules
-  (no self-matches, no scoring before kick-off, no draws, no negative scores).
+- `tests/api.spec.ts` — the **integration** suite (run with
+  `npm run test:integration`): the HTTP contract, health probe, SPA serving and
+  client-route fallback, JSON errors, duplicate-team handling, and match
+  lifecycle rules (no self-matches, no scoring before kick-off, no draws, no
+  negative scores).
 - `tests/teams.spec.ts` — registering teams through the UI and the duplicate
   and validation error states.
 - `tests/match-lifecycle.spec.ts` — the main flow: schedule a fixture, start
@@ -53,26 +56,29 @@ PLAYWRIGHT_CHANNEL=bundled npm run e2e
 - `tests/scoreboard.spec.ts` — scoreboard rendering, live polling of
   out-of-band score changes, and navigation between the main pages.
 
+The browser specs are grouped under `npm run test:e2e`; `npm run e2e` runs
+everything.
+
 Tests mutate league data, so they run serially (`workers: 1`) and create
 uniquely named teams to stay repeatable across runs against the same
 deployment.
 
 ## CI
 
-See [`.github/workflows/e2e.yml`](../.github/workflows/e2e.yml) for a GitHub
-Actions job that targets the deployed app. Set the `E2E_BASE_URL` repository
-variable (Settings → Secrets and variables → Actions → Variables) to the Render
-URL. The job:
+[`.github/workflows/ci-cd.yml`](../.github/workflows/ci-cd.yml) uses this suite
+in its `compose-tests` and `deploy` jobs:
 
-- uses the runner's preinstalled Chrome — no browser download;
-- builds nothing and starts no database (the Render service is already running);
-- runs on `deployment_status` after Render reports success, so it never tests a
-  stale version. `workflow_dispatch` is also enabled for manual runs.
+- `compose-tests` builds the stack with
+  `docker compose up --build -d --wait`, then runs `npm run test:integration`
+  (API contract) and `npm run test:e2e` (browser) against `http://localhost:8000`.
+  It uses the runner's preinstalled Chrome — no browser download.
+- `deploy` triggers the Render deploy hook, then polls `/api/health` until it
+  reports the commit that was pushed, which proves the new build is live.
 
-If you prefer a Render deploy hook, have it POST a `repository_dispatch` of type
-`render-deploy` and uncomment the matching trigger in the workflow. Point the
-same `PLAYWRIGHT_BASE_URL` / `PLAYWRIGHT_CHANNEL` environment variables at any
-other CI runner.
+Configure these in GitHub → Settings → Secrets and variables → Actions:
+
+- Variable `E2E_BASE_URL` — the deployed URL to validate after a deploy.
+- Secret `RENDER_DEPLOY_HOOK_URL` — the Render service's deploy hook URL.
 
 Note: the suite writes uniquely named teams and matches to whatever instance it
 targets, so prefer a staging/PR environment over a shared production one.

@@ -63,6 +63,8 @@ tags:
     description: Scheduling, live scoring and match lifecycle.
   - name: Standings
     description: Read-only league table derived from completed matches.
+  - name: Health
+    description: Liveness and deployment probe used by CI/CD and Render.
 
 paths:
   /teams:
@@ -487,6 +489,32 @@ paths:
         "500":
           $ref: "#/components/responses/ServerError"
 
+  /health:
+    get:
+      operationId: health
+      summary: Liveness and version probe
+      description: |
+        Unauthenticated liveness probe. Returns `ok` while the service is
+        serving requests, plus the application `version` and the `commit`
+        currently deployed (read from `RENDER_GIT_COMMIT` / `GIT_COMMIT` when
+        the host provides it). The CI/CD pipeline polls this after a Render
+        deploy to confirm the new commit is live, and it is also suitable as
+        the Render health check path.
+      tags:
+        - Health
+      security: []
+      responses:
+        "200":
+          description: The service is up.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Health"
+              example:
+                status: ok
+                version: 1.0.0
+                commit: c95c621a1b2c
+
 components:
   securitySchemes:
     bearerAuth:
@@ -773,3 +801,24 @@ components:
           type: string
           description: Human-readable explanation of the failure.
           example: Match not found.
+
+    Health:
+      type: object
+      description: Liveness and deployment probe response.
+      additionalProperties: false
+      required:
+        - status
+        - version
+      properties:
+        status:
+          type: string
+          description: Liveness marker; `ok` when the service is healthy.
+          example: ok
+        version:
+          type: string
+          description: Application version.
+          example: 1.0.0
+        commit:
+          type: [string, "null"]
+          description: Git commit currently deployed, when the host exposes it.
+          example: c95c621a1b2c

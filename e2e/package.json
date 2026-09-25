@@ -6,6 +6,8 @@
   "type": "module",
   "scripts": {
     "e2e": "playwright test",
+    "test:integration": "playwright test tests/api.spec.ts",
+    "test:e2e": "playwright test tests/teams.spec.ts tests/match-lifecycle.spec.ts tests/scoreboard.spec.ts",
     "e2e:ui": "playwright test --ui",
     "install:browsers": "playwright install chromium"
   },

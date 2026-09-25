@@ -22,6 +22,13 @@ test.describe("API and static serving", () => {
   });
 
   test("exposes teams and standings as JSON", async ({ request }) => {
+    const health = await request.get("/api/health");
+    expect(health.status()).toBe(200);
+    expect(await health.json()).toMatchObject({
+      status: "ok",
+      version: expect.any(String),
+    });
+
     const teams = await request.get("/api/teams");
     expect(teams.status()).toBe(200);
     const teamsBody = (await teams.json()) as unknown;

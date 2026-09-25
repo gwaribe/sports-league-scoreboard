@@ -120,3 +120,13 @@ class Error(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     detail: str
+
+
+class Health(BaseModel):
+    """Liveness and deployment probe response."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    status: str
+    version: str
+    commit: str | None = None

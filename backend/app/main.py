@@ -19,9 +19,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
-from . import seed
+from . import __version__, seed
 from .frontend import FrontendStaticFiles
-from .routers import matches, standings, teams
+from .routers import health, matches, standings, teams
 from .store import store
 
 API_PREFIX = "/api"
@@ -38,7 +38,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title="Sports League Scoreboard API",
-    version="1.0.0",
+    version=__version__,
     lifespan=lifespan,
 )
 
@@ -78,6 +78,7 @@ async def http_exception_handler(
     )
 
 
+app.include_router(health.router, prefix=API_PREFIX)
 app.include_router(teams.router, prefix=API_PREFIX)
 app.include_router(matches.router, prefix=API_PREFIX)
 app.include_router(standings.router, prefix=API_PREFIX)
