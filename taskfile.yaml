@@ -1,0 +1,20 @@
+version: 3
+
+tasks:
+  # run the frontend development server
+  frontend:
+    desc: Run the frontend development server
+    cmds:
+      - cd frontend && npm run dev
+  # run the backend development server
+  backend:
+    desc: Run the backend development server
+    cmds:
+      - cd backend && uv run uvicorn app.main:app --reload --port 8000
+  # run both frontend and backend development servers concurrently
+  run:
+    desc: Run both frontend and backend development servers concurrently
+    deps:
+      - task: frontend
+      - task: backend
+  # run docker
