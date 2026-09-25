@@ -17,14 +17,16 @@ tasks:
     deps:
       - task: frontend
       - task: backend
-  # build the docker compose stack and run the Playwright end-to-end tests
+  # run the Playwright end-to-end tests against an already-running deployment
   e2e:
-    desc: Run Playwright end-to-end tests against the docker-compose stack
+    desc: >-
+      Run Playwright e2e tests against a running deployment. Set
+      PLAYWRIGHT_BASE_URL to the deployed URL (defaults to localhost:8000) and
+      PLAYWRIGHT_CHANNEL=bundled to use Playwright's Chromium instead of the
+      machine's installed Chrome.
+    env:
+      PLAYWRIGHT_BASE_URL: '{{.PLAYWRIGHT_BASE_URL | default "http://localhost:8000"}}'
     cmds:
       - cd e2e && npm ci
-      - cd e2e && npx playwright install chromium
-      - docker compose up --build -d
       - ./e2e/scripts/wait-for-app.sh
       - cd e2e && npm run e2e
-    defer:
-      - docker compose down -v
