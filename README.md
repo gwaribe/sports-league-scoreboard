@@ -60,4 +60,3 @@ It is not necessary to write the code, but it is very important to understand ho
 ---
 Lessons were learnt from\
 [DataTalksClub AI dev tools zoomcamp](https://github.com/DataTalksClub/ai-dev-tools-zoomcamp)
->>>>>>> 779eee36038218d8aeb34f7810a3aed40fa06c43
