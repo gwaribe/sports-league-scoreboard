@@ -81,7 +81,9 @@ in its `compose-tests` and `deploy` jobs:
 
 Configure these in GitHub → Settings → Secrets and variables → Actions:
 
-- Variable `E2E_BASE_URL` — the deployed URL to validate after a deploy.
+- Variable `E2E_BASE_URL` — the deployed URL to validate after a deploy. A
+  secret with the same name is accepted as a fallback, but a variable is
+  preferred since the URL is not sensitive.
 - Secret `RENDER_DEPLOY_HOOK_URL` — the Render service's deploy hook URL.
 
 Note: the suite writes uniquely named teams and matches to whatever instance it
