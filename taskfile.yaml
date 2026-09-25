@@ -17,4 +17,14 @@ tasks:
     deps:
       - task: frontend
       - task: backend
-  # run docker
+  # build the docker compose stack and run the Playwright end-to-end tests
+  e2e:
+    desc: Run Playwright end-to-end tests against the docker-compose stack
+    cmds:
+      - cd e2e && npm ci
+      - cd e2e && npx playwright install chromium
+      - docker compose up --build -d
+      - ./e2e/scripts/wait-for-app.sh
+      - cd e2e && npm run e2e
+    defer:
+      - docker compose down -v
