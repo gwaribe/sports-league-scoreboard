@@ -1,0 +1,48 @@
+# Render Blueprint — infrastructure as code for a second, independent copy of
+# the Sports League Scoreboard.
+#
+# The existing Render service (https://sports-league-scoreboard.onrender.com) is
+# the *dev* environment and stays managed in the Render dashboard. This blueprint
+# defines the *production* environment: its own web service and its own
+# PostgreSQL database, so production data and deploys never touch dev.
+#
+# One-time setup:
+#   1. Render Dashboard → New → Blueprint → select this repository.
+#   2. Apply the blueprint to create the service and database below.
+#   3. Copy the new service's deploy hook into
+#      GitHub → Settings → Environments → production →
+#      secret RENDER_DEPLOY_HOOK_URL.
+#   4. Set the production environment variable BASE_URL to the new service URL
+#      (https://sports-league-scoreboard-production.onrender.com).
+#   5. Add required reviewers to the `production` GitHub Environment so the
+#      deploy waits for manual approval.
+#
+# After that: pushes to main deploy dev, and a manual workflow run deploys
+# production. See _docs/environments.md.
+#
+# `autoDeploy: false` matters: without it Render would redeploy production on
+# every push to main, bypassing the tests and the manual approval gate in CI.
+# For an always-on production service (no free-tier spin-down) and a
+# non-expiring database, uncomment the `plan:` lines below.
+
+databases:
+  - name: scoreboard-production-db
+    databaseName: scoreboard
+    user: scoreboard
+    # plan: starter          # free Postgres is deleted after 30 days
+
+services:
+  - type: web
+    name: sports-league-scoreboard-production
+    runtime: docker
+    branch: main
+    # Only CI deploys this service, and only after manual approval.
+    autoDeploy: false
+    # plan: starter          # free web services spin down when idle
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /api/health
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: scoreboard-production-db
+          property: connectionString
