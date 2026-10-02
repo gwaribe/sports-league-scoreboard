@@ -8,7 +8,7 @@ For a click-by-click, do-this-in-order walkthrough, see
 [`setup-environments.md`](setup-environments.md).
 
 ## Goal
-
+ 
 - **development (dev)** — deployed automatically by CI after tests pass on every
   push to `main`. It is allowed to be unstable. Use it to manually exercise the
   change and catch issues early.
