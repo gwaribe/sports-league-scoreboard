@@ -32,23 +32,63 @@ Each GitHub Environment holds exactly two values:
 
 ---
 
-## Part 1 — Create production on Render
+## Part 1 — Create production on Render (manual, free resources)
 
-1. Open the Render dashboard → **New** → **Blueprint**.
-2. Select the `sports-league-scoreboard` repository and apply it.
-3. Render creates two things from `render.yaml`:
-   - the web service `sports-league-scoreboard-production`
-   - the database `scoreboard-production-db`
-4. Wait until the service finishes its first deploy and its health check passes.
-5. Open the production service → **Settings**, and copy these two values
-   somewhere temporary:
-   - the service **URL** (looks like
-     `https://sports-league-scoreboard-production.onrender.com`; use whatever
-     Render shows, it may add a suffix)
-   - the **Deploy Hook** URL, under *Deploy Hook* → **Copy**
+Do this by hand in the Render dashboard. It creates the same service and
+database that `render.yaml` describes, without the Blueprint flow (which may ask
+for a payment method). `render.yaml` stays in the repo as documentation of the
+intended settings.
 
-Production is created but will not redeploy on its own: `render.yaml` sets
-`autoDeploy: false`. CI is the only path to a production deploy.
+### 1a. Create the production database (recommended)
+
+1. Render dashboard → **New** → **Postgres**.
+2. Fill in:
+   - **Name**: `scoreboard-production-db`
+   - **Database**: `scoreboard`
+   - **User**: `scoreboard`
+   - **Region**: the same region as your dev service (keeps things fast)
+   - **Plan**: **Free**
+3. Click **Create Database** and wait until it is available.
+4. Open it and copy the **Internal Database URL** (used by services in the same
+   Render region). It looks like
+   `postgresql://scoreboard:...@dpg-xxxx-a/scoreboard`.
+
+> Free Postgres is **deleted after 30 days**. That is fine for getting the flow
+> working, but production data will not survive. When you are ready, upgrade it
+> to a paid plan. A free external Postgres (for example Neon or Supabase) is
+> another option that does not expire — put its connection string in
+> `DATABASE_URL` instead.
+
+### 1b. If you cannot create a database
+
+Render's Docker image is configured to fall back to SQLite at `/data/league.db`,
+so the service will still start without `DATABASE_URL`. Be aware this data is
+**lost on every redeploy** because free services have no persistent disk. Only
+use this to try the flow; use 1a for anything real.
+
+### 1c. Create the production web service
+
+1. Render dashboard → **New** → **Web Service** → **Build and deploy from a Git
+   repository** → connect `gwaribe/sports-league-scoreboard`.
+2. Fill in:
+   - **Name**: `sports-league-scoreboard-production`
+   - **Region**: same as the database
+   - **Branch**: `main`
+   - **Language / Runtime**: **Docker**
+   - **Dockerfile Path**: `./Dockerfile`
+   - **Instance Type**: **Free**
+   - **Auto-Deploy**: **No** ← important, CI must be the only deployer
+   - **Health Check Path**: `/api/health`
+3. Under **Environment Variables**, add:
+   - `DATABASE_URL` = the Internal Database URL from 1a (skip if you used 1b)
+4. Click **Create Web Service** and wait for the first deploy to finish and the
+   health check to pass.
+5. Copy two values somewhere temporary:
+   - the service **URL** (Render may add a suffix; use whatever it shows)
+   - the **Deploy Hook** URL under *Settings → Deploy Hook → Copy*
+
+Production will not redeploy on its own: you set **Auto-Deploy = No**, so CI is
+the only path to a production deploy.
 
 ## Part 2 — Turn off auto-deploy on the dev service
 
@@ -133,15 +173,29 @@ repository-level entries.
 
 ---
 
+## What free tier means for "always available"
+
+Without a payment method, Render's free instances:
+- **spin down after ~15 minutes idle** and cold-start on the next request, and
+- the **free database is deleted after 30 days**.
+
+So production will be reachable, but not instantly always-on, and its data has
+an expiry. If/when you are ready, the two fixes are:
+- upgrade the production web service to `plan: starter` (always on), and
+- use a paid or non-expiring database.
+
+---
+
 ## Troubleshooting
 
 - **Deploy job fails at "Require deployment configuration"** — that environment
   is missing `BASE_URL` or `RENDER_DEPLOY_HOOK_URL`. Redo Part 4 for it.
 - **Production deploy says "Waiting for ... commit ..." and times out** — the
   deploy hook shipped a different commit than the run. Always start the manual
-  run from `main`, and make sure `autoDeploy` is off so Render is not racing CI.
+  run from `main`, and make sure auto-deploy is off so Render is not racing CI.
 - **Two deploys appear on every push** — auto-deploy is still on in Render
   (Part 2).
-- **Production spins down / database disappears** — free-tier limits. Uncomment
-  the `plan: starter` lines in `render.yaml` for always-on production and a
-  non-expiring database.
+- **Render asks for a payment method even for a free web service** — try 1b
+  (no database) first; if the web service itself still requires a card, the
+  alternative is to host the second copy elsewhere (another free host) using the
+  same Docker image.

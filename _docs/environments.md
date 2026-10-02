@@ -86,9 +86,11 @@ share the exact same steps but target different services.
 1. **development service** (existing, dashboard): open *Settings → Build &
    Deploy* and set **Auto-Deploy = No**. CI is now the only thing that deploys,
    so nothing ships before the tests pass.
-2. **production service**: *New → Blueprint*, select this repository, and apply
-   `render.yaml`. It creates the production service and database and keeps
-   `autoDeploy: false`, so it only deploys when CI asks it to.
+2. **production service**: create it by hand (New → Web Service + New →
+   Postgres) with **Auto-Deploy = No**, as described in
+   [`setup-environments.md`](setup-environments.md). `render.yaml` documents the
+   exact settings; applying it as a Blueprint is optional and may require a
+   payment method on file.
 3. Copy each service's **Deploy Hook URL** (*Settings → Deploy Hook*).
 
 ### 2. GitHub Environments

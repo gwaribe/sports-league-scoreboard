@@ -6,7 +6,11 @@
 # defines the *production* environment: its own web service and its own
 # PostgreSQL database, so production data and deploys never touch dev.
 #
-# One-time setup:
+# This file documents the intended production setup. The recommended path is to
+# create these resources by hand in the Render dashboard (New → Web Service and
+# New → Postgres) following _docs/setup-environments.md, because the Blueprint
+# flow may require a payment method on file. Applying this file as a Blueprint
+# is optional:
 #   1. Render Dashboard → New → Blueprint → select this repository.
 #   2. Apply the blueprint to create the service and database below.
 #   3. Copy the new service's deploy hook into
