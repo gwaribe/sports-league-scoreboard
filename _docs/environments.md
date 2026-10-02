@@ -4,6 +4,9 @@ This document describes how the project runs **two independent environments**,
 how code moves from a push to production, and the one-time setup each side
 needs. It is the source of truth referenced by `render.yaml`.
 
+For a click-by-click, do-this-in-order walkthrough, see
+[`setup-environments.md`](setup-environments.md).
+
 ## Goal
 
 - **development (dev)** — deployed automatically by CI after tests pass on every
